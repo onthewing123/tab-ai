@@ -56,7 +56,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 32px 40px;
+  min-height: 100vh;
+  padding: 40px 32px;
   position: relative;
   overflow: hidden;
 }
@@ -93,9 +94,9 @@ html, body {
 }
 
 .logo-img {
-  width: 172px;
-  height: 172px;
-  border-radius: 38px;
+  width: 160px;
+  height: 160px;
+  border-radius: 36px;
   object-fit: cover;
   position: relative;
   z-index: 1;
