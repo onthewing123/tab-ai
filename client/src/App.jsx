@@ -86,7 +86,9 @@ export default function App() {
   const [sel, setSel] = useState({});
   const [phase, setPhase] = useState('idle'); // idle | loading | error
   const [errMsg, setErrMsg] = useState('');
-  const [svc, setSvc] = useState(true);
+  const [tipPct, setTipPct] = useState(12.5);
+  const [customTip, setCustomTip] = useState('');
+  const [showCustomTip, setShowCustomTip] = useState(false);
   const [toast, setToast] = useState(false);
   const [menuCount, setMenuCount] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -287,8 +289,8 @@ export default function App() {
   });
 
   const subtotal = alacarteSubtotal + setMenuLineItems.reduce((s, l) => s + l.price, 0);
-  const svcAmt = subtotal * 0.125;
-  const total = subtotal + (svc ? svcAmt : 0);
+  const tipAmt = subtotal * (tipPct / 100);
+  const total = subtotal + tipAmt;
   const hasAnySelection = selKeys.length > 0 || setMenuSels.some(s => s.optionIdx !== null);
   const orderBarCount = selKeys.length + setMenuSels.filter(s => s.optionIdx !== null).length;
   const totalItemCount = menu.length + setMenus.reduce((s, sm) =>
@@ -305,7 +307,7 @@ export default function App() {
       'My Tab', '',
       ...lines, '',
       `Subtotal: ${fmt(subtotal)}`,
-      ...(svc ? [`Service (12.5%): ${fmt(svcAmt)}`] : []),
+      ...(tipAmt > 0 ? [`Tip (${tipPct}%): ${fmt(tipAmt)}`] : []),
       `Total: ${fmt(total)}`,
     ].join('\n');
 
@@ -565,62 +567,99 @@ export default function App() {
               <div className="tab-title">My Tab</div>
             </div>
 
-            <div className="tab-body">
-              {setMenuLineItems.map((line, i) => (
-                <div key={`sml-${i}`} className={`tab-row tab-row-${line.kind}`}>
-                  <div className="tab-row-name">{line.label}</div>
-                  <div className="tab-row-price">
-                    {line.kind === 'included' ? 'incl.' : fmt(line.price)}
-                  </div>
-                </div>
-              ))}
-              {selKeys.map(i => {
-                const item = menu[i];
-                if (!item) return null;
-                return (
-                  <div key={i} className="tab-row">
-                    <div>
-                      <div className="tab-row-name">{item.name}</div>
-                      <div className="tab-row-qty">×1</div>
+            <div className="tab-scroll">
+              <div className="tab-body">
+                {setMenuLineItems.map((line, i) => (
+                  <div key={`sml-${i}`} className={`tab-row tab-row-${line.kind}`}>
+                    <div className="tab-row-name">{line.label}</div>
+                    <div className="tab-row-price">
+                      {line.kind === 'included' ? 'incl.' : fmt(line.price)}
                     </div>
-                    <div className="tab-row-price">{fmt(item.price)}</div>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="tab-summary">
-              <div className="sum-row">
-                <span className="sum-label">Subtotal</span>
-                <span className="sum-val">{fmt(subtotal)}</span>
+                ))}
+                {selKeys.map(i => {
+                  const item = menu[i];
+                  if (!item) return null;
+                  return (
+                    <div key={i} className="tab-row">
+                      <div>
+                        <div className="tab-row-name">{item.name}</div>
+                        <div className="tab-row-qty">×1</div>
+                      </div>
+                      <div className="tab-row-price">{fmt(item.price)}</div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="sum-row-svc">
-                <span className="sum-label">Service (12.5%)</span>
-                <div className="svc-right">
-                  <span className="svc-amt">{fmt(svcAmt)}</span>
-                  <button
-                    className={`toggle${svc ? ' on' : ''}`}
-                    onClick={() => setSvc(v => !v)}
-                    aria-label="Toggle service charge"
-                  >
-                    <div className="toggle-dot" />
-                  </button>
+
+              <div className="tab-summary">
+                <div className="sum-row">
+                  <span className="sum-label">Subtotal</span>
+                  <span className="sum-val">{fmt(subtotal)}</span>
+                </div>
+                <div className="tip-section">
+                  <div className="tip-label-row">
+                    <span className="sum-label">Tip</span>
+                    <div className="tip-pills">
+                      {[0, 10, 12.5, 15].map(pct => (
+                        <button
+                          key={pct}
+                          className={`tip-pill${!showCustomTip && tipPct === pct ? ' on' : ''}`}
+                          onClick={() => { setTipPct(pct); setShowCustomTip(false); setCustomTip(''); }}
+                        >
+                          {pct === 0 ? 'None' : `${pct}%`}
+                        </button>
+                      ))}
+                      <button
+                        className={`tip-pill${showCustomTip ? ' on' : ''}`}
+                        onClick={() => setShowCustomTip(true)}
+                      >
+                        Custom
+                      </button>
+                    </div>
+                  </div>
+                  {showCustomTip && (
+                    <div className="tip-custom-row">
+                      <input
+                        className="tip-custom-input"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        value={customTip}
+                        onChange={e => {
+                          setCustomTip(e.target.value);
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) setTipPct(v);
+                        }}
+                        autoFocus
+                      />
+                      <span className="tip-custom-pct">%</span>
+                    </div>
+                  )}
+                </div>
+                {tipAmt > 0 && (
+                  <div className="sum-row">
+                    <span className="sum-label">Tip amount</span>
+                    <span className="sum-val">{fmt(tipAmt)}</span>
+                  </div>
+                )}
+                <div className="sum-line" />
+                <div className="total-row">
+                  <span className="total-label">Estimated Total</span>
+                  <span className="total-val">{fmt(total)}</span>
                 </div>
               </div>
-              <div className="sum-line" />
-              <div className="total-row">
-                <span className="total-label">Estimated Total</span>
-                <span className="total-val">{fmt(total)}</span>
-              </div>
-            </div>
 
-            <div className="tab-actions">
-              <button className="btn-share" onClick={share}>
-                <IcoShare /> Share Tab
-              </button>
-              <button className="btn-back-menu" onClick={() => go('menu')}>
-                Back to Menu
-              </button>
+              <div className="tab-actions">
+                <button className="btn-share" onClick={share}>
+                  <IcoShare /> Share Tab
+                </button>
+                <button className="btn-back-menu" onClick={() => go('menu')}>
+                  Back to Menu
+                </button>
+              </div>
             </div>
           </div>
         )}
