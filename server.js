@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const { exec } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk');
 const puppeteer = require('puppeteer');
 
@@ -33,11 +34,15 @@ const stripMarkdown = (text) => {
 
 app.get('/api/health', (_req, res) => {
   const chromiumPath = getChromiumPath();
-  res.json({
-    status: 'ok',
-    chromiumPath: chromiumPath || null,
-    chromiumFound: chromiumPath ? fs.existsSync(chromiumPath) : false,
-    checkedPaths: CHROMIUM_PATHS.map(p => ({ path: p, exists: fs.existsSync(p) })),
+  exec('find /usr -name "chrome*" -o -name "chromium*" 2>/dev/null', { timeout: 10000 }, (err, stdout) => {
+    res.json({
+      status: 'ok',
+      chromiumPath: chromiumPath || null,
+      chromiumFound: chromiumPath ? fs.existsSync(chromiumPath) : false,
+      checkedPaths: CHROMIUM_PATHS.map(p => ({ path: p, exists: fs.existsSync(p) })),
+      findResults: stdout ? stdout.trim().split('\n').filter(Boolean) : [],
+      findError: err ? err.message : null,
+    });
   });
 });
 
