@@ -103,9 +103,10 @@ app.post('/api/scrape-menu', async (req, res) => {
   let parsedUrl;
   try {
     parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('bad protocol');
-  } catch {
-    return res.status(400).json({ error: 'Invalid URL' });
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('URL must start with http:// or https://');
+  } catch (urlErr) {
+    console.error('[scrape-menu] url parse error:', urlErr.message);
+    return res.status(400).json({ error: urlErr.message });
   }
 
   try {

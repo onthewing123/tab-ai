@@ -188,9 +188,8 @@ export default function App() {
   };
 
   const handleUrlSubmit = () => {
-    let url = urlInput.trim();
+    const url = urlInput.trim();
     if (!url) return;
-    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     console.log('[scrape-menu] submitting url:', url);
     setPhase('loading');
     setErrMsg('');
