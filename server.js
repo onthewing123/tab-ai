@@ -96,6 +96,8 @@ app.post('/api/read-menu', async (req, res) => {
 app.post('/api/scrape-menu', async (req, res) => {
   const { url } = req.body;
 
+  console.log('[scrape-menu] received url:', url);
+
   if (!url) return res.status(400).json({ error: 'Missing url in request body' });
 
   let parsedUrl;
@@ -108,6 +110,7 @@ app.post('/api/scrape-menu', async (req, res) => {
 
   try {
     const scrapeResult = await firecrawl.scrapeUrl(parsedUrl.href, { formats: ['markdown'] });
+    console.log('[scrape-menu] firecrawl response:', JSON.stringify(scrapeResult, null, 2));
 
     if (!scrapeResult.success || !scrapeResult.markdown) {
       return res.status(422).json({ error: 'Could not extract content from that page' });
@@ -130,8 +133,8 @@ app.post('/api/scrape-menu', async (req, res) => {
     console.log('[scrape-menu] raw response:', raw);
     parseAndRespond(raw, res);
   } catch (err) {
-    console.error('[scrape-menu] message:', err.message);
-    console.error('[scrape-menu] status:', err.status);
+    console.error('[scrape-menu] error message:', err.message);
+    console.error('[scrape-menu] error status:', err.status);
     console.error('[scrape-menu] full error:', JSON.stringify(err, null, 2));
     const status = err.status ?? 500;
     res.status(status).json({ error: err.message || 'Failed to scrape menu' });

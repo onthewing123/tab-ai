@@ -188,8 +188,10 @@ export default function App() {
   };
 
   const handleUrlSubmit = () => {
-    const url = urlInput.trim();
+    let url = urlInput.trim();
     if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    console.log('[scrape-menu] submitting url:', url);
     setPhase('loading');
     setErrMsg('');
     go('upload', async () => {
@@ -298,7 +300,7 @@ export default function App() {
             <div className="url-row">
               <input
                 className="url-input"
-                type="url"
+                type="text"
                 placeholder="Paste a menu URL…"
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
