@@ -1,27 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const { exec } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk');
-const puppeteer = require('puppeteer');
+const FirecrawlApp = require('@mendable/firecrawl-js').default;
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const CHROMIUM_PATHS = [
-  '/usr/bin/chromium',
-  '/usr/bin/chromium-browser',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-];
-
-const getChromiumPath = () => {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
-  return CHROMIUM_PATHS.find(p => fs.existsSync(p)) || undefined;
-};
+const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
 
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
@@ -32,18 +19,36 @@ const stripMarkdown = (text) => {
   return text.trim();
 };
 
+const MENU_PROMPT_SUFFIX = `Determine whether it is a set menu / prix fixe menu (fixed price tiers with course choices) or an à la carte menu (items each with their own price).
+
+If à la carte, return exactly:
+{"type":"alacarte","items":[{"section":string,"name":string,"description":string,"price":number}]}
+
+If set or prix fixe, return exactly:
+{"type":"set","options":[{"label":string,"price":number}],"courses":[{"name":string,"items":[{"name":string,"description":string,"supplement":number}]}]}
+
+For set menus: "options" are the price tiers (e.g. Lunch £32.95 / Dinner £38.95, or 2 courses £28 / 3 courses £35). "courses" are the meal stages (Starter, Main, Dessert etc). "supplement" is the extra charge above the base price, or 0 if none. All prices as numbers in GBP.
+
+Return ONLY valid JSON. No markdown, no backticks, no explanation.`;
+
+const parseAndRespond = (raw, res) => {
+  const parsed = JSON.parse(raw);
+  if (parsed.type === 'set') {
+    if (!Array.isArray(parsed.options) || !Array.isArray(parsed.courses)) {
+      return res.status(422).json({ error: 'Invalid set menu structure' });
+    }
+    res.json({ type: 'set', options: parsed.options, courses: parsed.courses });
+  } else {
+    const items = Array.isArray(parsed) ? parsed : parsed.items;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(422).json({ error: 'No menu items found' });
+    }
+    res.json({ type: 'alacarte', items });
+  }
+};
+
 app.get('/api/health', (_req, res) => {
-  const chromiumPath = getChromiumPath();
-  exec('find /usr -name "chrome*" -o -name "chromium*" 2>/dev/null', { timeout: 10000 }, (err, stdout) => {
-    res.json({
-      status: 'ok',
-      chromiumPath: chromiumPath || null,
-      chromiumFound: chromiumPath ? fs.existsSync(chromiumPath) : false,
-      checkedPaths: CHROMIUM_PATHS.map(p => ({ path: p, exists: fs.existsSync(p) })),
-      findResults: stdout ? stdout.trim().split('\n').filter(Boolean) : [],
-      findError: err ? err.message : null,
-    });
-  });
+  res.json({ status: 'ok' });
 });
 
 app.post('/api/read-menu', async (req, res) => {
@@ -66,17 +71,7 @@ app.post('/api/read-menu', async (req, res) => {
               : { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
             {
               type: 'text',
-              text: `Analyze this restaurant menu image. Determine whether it is a set menu / prix fixe menu (fixed price tiers with course choices) or an à la carte menu (items each with their own price).
-
-If à la carte, return exactly:
-{"type":"alacarte","items":[{"section":string,"name":string,"description":string,"price":number}]}
-
-If set or prix fixe, return exactly:
-{"type":"set","options":[{"label":string,"price":number}],"courses":[{"name":string,"items":[{"name":string,"description":string,"supplement":number}]}]}
-
-For set menus: "options" are the price tiers (e.g. Lunch £32.95 / Dinner £38.95, or 2 courses £28 / 3 courses £35). "courses" are the meal stages (Starter, Main, Dessert etc). "supplement" is the extra charge above the base price, or 0 if none. All prices as numbers in GBP.
-
-Return ONLY valid JSON. No markdown, no backticks, no explanation.`,
+              text: `Analyze this restaurant menu image. ${MENU_PROMPT_SUFFIX}`,
             },
           ],
         },
@@ -85,20 +80,7 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.`,
 
     const raw = stripMarkdown(message.content[0].text);
     console.log('[read-menu] raw response:', raw);
-    const parsed = JSON.parse(raw);
-
-    if (parsed.type === 'set') {
-      if (!Array.isArray(parsed.options) || !Array.isArray(parsed.courses)) {
-        return res.status(422).json({ error: 'Invalid set menu structure' });
-      }
-      res.json({ type: 'set', options: parsed.options, courses: parsed.courses });
-    } else {
-      const items = Array.isArray(parsed) ? parsed : parsed.items;
-      if (!Array.isArray(items) || items.length === 0) {
-        return res.status(422).json({ error: 'No menu items found in image' });
-      }
-      res.json({ type: 'alacarte', items });
-    }
+    parseAndRespond(raw, res);
   } catch (err) {
     console.error('[read-menu] message:', err.message);
     console.error('[read-menu] status:', err.status);
@@ -124,31 +106,14 @@ app.post('/api/scrape-menu', async (req, res) => {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 
-  let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: getChromiumPath(),
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
-    });
+    const scrapeResult = await firecrawl.scrapeUrl(parsedUrl.href, { formats: ['markdown'] });
 
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (compatible; TabAI/1.0)');
-    await page.goto(parsedUrl.href, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    const text = await page.evaluate(() => {
-      document.querySelectorAll('script, style, nav, footer, [aria-hidden="true"]').forEach(el => el.remove());
-      return document.body?.innerText || '';
-    });
-
-    await browser.close();
-    browser = null;
-
-    if (!text || text.length < 50) {
+    if (!scrapeResult.success || !scrapeResult.markdown) {
       return res.status(422).json({ error: 'Could not extract content from that page' });
     }
 
-    const truncated = text.slice(0, 12000);
+    const truncated = scrapeResult.markdown.slice(0, 12000);
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -156,42 +121,15 @@ app.post('/api/scrape-menu', async (req, res) => {
       messages: [
         {
           role: 'user',
-          content: `Analyze this restaurant menu text extracted from a webpage. Determine whether it is a set menu / prix fixe menu (fixed price tiers with course choices) or an à la carte menu (items each with their own price).
-
-If à la carte, return exactly:
-{"type":"alacarte","items":[{"section":string,"name":string,"description":string,"price":number}]}
-
-If set or prix fixe, return exactly:
-{"type":"set","options":[{"label":string,"price":number}],"courses":[{"name":string,"items":[{"name":string,"description":string,"supplement":number}]}]}
-
-For set menus: "options" are the price tiers (e.g. Lunch £32.95 / Dinner £38.95, or 2 courses £28 / 3 courses £35). "courses" are the meal stages (Starter, Main, Dessert etc). "supplement" is the extra charge above the base price, or 0 if none. All prices as numbers in GBP.
-
-Return ONLY valid JSON. No markdown, no backticks, no explanation.
-
-Menu text:
-${truncated}`,
+          content: `Analyze this restaurant menu text extracted from a webpage. ${MENU_PROMPT_SUFFIX}\n\nMenu text:\n${truncated}`,
         },
       ],
     });
 
     const raw = stripMarkdown(message.content[0].text);
     console.log('[scrape-menu] raw response:', raw);
-    const parsed = JSON.parse(raw);
-
-    if (parsed.type === 'set') {
-      if (!Array.isArray(parsed.options) || !Array.isArray(parsed.courses)) {
-        return res.status(422).json({ error: 'Invalid set menu structure' });
-      }
-      res.json({ type: 'set', options: parsed.options, courses: parsed.courses });
-    } else {
-      const items = Array.isArray(parsed) ? parsed : parsed.items;
-      if (!Array.isArray(items) || items.length === 0) {
-        return res.status(422).json({ error: 'No menu items found on that page' });
-      }
-      res.json({ type: 'alacarte', items });
-    }
+    parseAndRespond(raw, res);
   } catch (err) {
-    if (browser) await browser.close().catch(() => {});
     console.error('[scrape-menu] message:', err.message);
     console.error('[scrape-menu] status:', err.status);
     console.error('[scrape-menu] full error:', JSON.stringify(err, null, 2));
