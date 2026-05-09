@@ -56,7 +56,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px 56px;
+  padding: 40px 32px 40px;
   position: relative;
   overflow: hidden;
 }
@@ -102,12 +102,13 @@ html, body {
 }
 
 .tagline {
-  font-size: 15px;
-  color: rgba(255,255,255,0.4);
-  letter-spacing: 0.025em;
-  margin-bottom: 32px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  margin-bottom: 36px;
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.25;
 }
 
 .home-divider {
