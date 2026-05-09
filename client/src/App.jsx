@@ -326,7 +326,9 @@ export default function App() {
         {/* ── HOME ── */}
         {screen === 'home' && (
           <div className="home">
-            <img src="/logo.png" className="logo-img" alt="Tab AI" />
+            <div className="logo-wrap">
+              <img src="/logo.png" className="logo-img" alt="Tab AI" />
+            </div>
             <div className="tagline">Scan a menu. Build your order.</div>
             <button
               className="btn-scan"

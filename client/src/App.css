@@ -53,12 +53,31 @@ html, body {
   padding: 48px 32px 56px;
 }
 
-.logo-img {
-  width: 148px;
-  height: 148px;
-  border-radius: 34px;
+.logo-wrap {
+  position: relative;
   margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-wrap::before {
+  content: '';
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.45) 0%, rgba(109, 40, 217, 0.18) 50%, transparent 75%);
+  filter: blur(18px);
+  z-index: 0;
+}
+
+.logo-img {
+  width: 172px;
+  height: 172px;
+  border-radius: 38px;
   object-fit: cover;
+  position: relative;
+  z-index: 1;
 }
 
 .tagline {
