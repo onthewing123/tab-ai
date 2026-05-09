@@ -109,7 +109,36 @@ app.post('/api/scrape-menu', async (req, res) => {
     return res.status(400).json({ error: urlErr.message });
   }
 
+  const IMAGE_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' };
+  const extMatch = parsedUrl.pathname.match(/\.([a-z]+)$/i);
+  const imageMediaType = extMatch ? IMAGE_TYPES['.'+extMatch[1].toLowerCase()] : null;
+
   try {
+    if (imageMediaType) {
+      console.log('[scrape-menu] detected image url, media type:', imageMediaType);
+      const imageResponse = await fetch(parsedUrl.href);
+      if (!imageResponse.ok) {
+        return res.status(422).json({ error: 'Could not fetch image from that URL' });
+      }
+      const base64 = Buffer.from(await imageResponse.arrayBuffer()).toString('base64');
+
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: base64 } },
+            { type: 'text', text: `Analyze this restaurant menu image. ${MENU_PROMPT_SUFFIX}` },
+          ],
+        }],
+      });
+
+      const raw = stripMarkdown(message.content[0].text);
+      console.log('[scrape-menu] claude image response:', raw);
+      return parseAndRespond(raw, res);
+    }
+
     const scrapeResult = await firecrawl.scrape(parsedUrl.href, {
       formats: ['markdown'],
       waitFor: 3000,
@@ -125,12 +154,10 @@ app.post('/api/scrape-menu', async (req, res) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: `Analyze this restaurant menu text extracted from a webpage. ${MENU_PROMPT_SUFFIX}\n\nMenu text:\n${truncated}`,
-        },
-      ],
+      messages: [{
+        role: 'user',
+        content: `Analyze this restaurant menu text extracted from a webpage. ${MENU_PROMPT_SUFFIX}\n\nMenu text:\n${truncated}`,
+      }],
     });
 
     const raw = stripMarkdown(message.content[0].text);
