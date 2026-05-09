@@ -105,6 +105,7 @@ export default function App() {
   const [addMenuMode, setAddMenuMode] = useState(null); // null | 'options' | 'url'
   const [addMenuUrl, setAddMenuUrl] = useState('');
   const [menuNames, setMenuNames] = useState([]);
+  const [loadingProgress, setLoadingProgress] = useState(null); // null | { current, total }
 
   const go = (to, after) => {
     setFading(true);
@@ -115,21 +116,19 @@ export default function App() {
     }, 300);
   };
 
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-
+  const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const base64 = ev.target.result.split(',')[1];
-      const mediaType = file.type || 'image/jpeg';
+    reader.onload = ev => resolve({ base64: ev.target.result.split(',')[1], mediaType: file.type || 'image/jpeg' });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-      setPhase('loading');
-      setErrMsg('');
-
-      try {
-        const result = await scanMenu(base64, mediaType);
+  const processFiles = async (files) => {
+    for (let i = 0; i < files.length; i++) {
+      if (files.length > 1) setLoadingProgress({ current: i + 1, total: files.length });
+      const { base64, mediaType } = await readFileAsBase64(files[i]);
+      const result = await scanMenu(base64, mediaType);
+      if (i === 0) {
         setSel({});
         setMenuCount(1);
         setShowAddForm(false);
@@ -144,51 +143,53 @@ export default function App() {
           setSetMenus([]);
           setSetMenuSels([]);
         }
+      } else {
+        if (result.type === 'set') {
+          setSetMenus(prev => [...prev, result]);
+          setSetMenuSels(prev => [...prev, { optionIdx: null, courses: {} }]);
+        } else {
+          if (result.items?.length) setMenu(prev => [...prev, ...result.items]);
+        }
+        setMenuCount(c => c + 1);
+        setMenuNames(prev => [...prev, result.menuName || 'Menu']);
+      }
+    }
+    setLoadingProgress(null);
+  };
+
+  const handleFile = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = '';
+    setPhase('loading');
+    setErrMsg('');
+    try {
+      await processFiles(files);
+      go('menu');
+      setPhase('idle');
+    } catch {
+      setErrMsg("Couldn't read menu — try a clearer screenshot");
+      setPhase('error');
+      setLoadingProgress(null);
+    }
+  };
+
+  const handleHomeUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = '';
+    setPhase('loading');
+    setErrMsg('');
+    go('upload', async () => {
+      try {
+        await processFiles(files);
         go('menu');
         setPhase('idle');
       } catch {
         setErrMsg("Couldn't read menu — try a clearer screenshot");
         setPhase('error');
+        setLoadingProgress(null);
       }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleHomeUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setPhase('loading');
-    setErrMsg('');
-    go('upload', async () => {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const base64 = ev.target.result.split(',')[1];
-        const mediaType = file.type || 'image/jpeg';
-        try {
-          const result = await scanMenu(base64, mediaType);
-          setSel({});
-          setMenuCount(1);
-          setShowAddForm(false);
-          setMenuNames([result.menuName || 'Menu']);
-          if (result.type === 'set') {
-            setMenu([]);
-            setSetMenus([result]);
-            setSetMenuSels([{ optionIdx: null, courses: {} }]);
-          } else {
-            if (!result.items?.length) throw new Error('No items found');
-            setMenu(result.items);
-            setSetMenus([]);
-            setSetMenuSels([]);
-          }
-          go('menu');
-          setPhase('idle');
-        } catch {
-          setErrMsg("Couldn't read menu — try a clearer screenshot");
-          setPhase('error');
-        }
-      };
-      reader.readAsDataURL(file);
     });
   };
 
@@ -414,6 +415,7 @@ export default function App() {
               ref={homeUploadRef}
               type="file"
               accept="image/*,.pdf"
+              multiple
               style={{ display: 'none' }}
               onChange={handleHomeUpload}
             />
@@ -426,12 +428,16 @@ export default function App() {
             {phase === 'loading' ? (
               <div className="loading">
                 <div className="spinner" />
-                <div className="loading-text">Reading your menu…</div>
+                <div className="loading-text">
+                  {loadingProgress
+                    ? `Reading menu ${loadingProgress.current} of ${loadingProgress.total}…`
+                    : 'Reading your menu…'}
+                </div>
               </div>
             ) : (
               <>
                 <div className="upload-zone">
-                  <input type="file" accept="image/*,.pdf" onChange={handleFile} />
+                  <input type="file" accept="image/*,.pdf" multiple onChange={handleFile} />
                   <div className="upload-cam"><IcoCamera /></div>
                   <div className="upload-label">Screenshot your menu</div>
                   <div className="upload-sub">Tap to choose an image</div>
