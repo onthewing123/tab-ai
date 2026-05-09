@@ -98,6 +98,8 @@ export default function App() {
   const [setMenus, setSetMenus] = useState([]);
   const [setMenuSels, setSetMenuSels] = useState([]);
   const [urlInput, setUrlInput] = useState('');
+  const [addMenuMode, setAddMenuMode] = useState(null); // null | 'options' | 'url'
+  const [addMenuUrl, setAddMenuUrl] = useState('');
 
   const go = (to, after) => {
     setFading(true);
@@ -176,6 +178,30 @@ export default function App() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAddMenuUrl = async () => {
+    const url = addMenuUrl.trim();
+    if (!url) return;
+    setAdding(true);
+    setAddError('');
+    setAddMenuMode(null);
+    setAddMenuUrl('');
+    try {
+      const result = await scrapeMenu(url);
+      if (result.type === 'set') {
+        setSetMenus(prev => [...prev, result]);
+        setSetMenuSels(prev => [...prev, { optionIdx: null, courses: {} }]);
+      } else {
+        if (!result.items?.length) throw new Error('No items found');
+        setMenu(prev => [...prev, ...result.items]);
+      }
+      setMenuCount(c => c + 1);
+    } catch {
+      setAddError("Couldn't read menu from that URL");
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleManualAdd = () => {
@@ -364,16 +390,38 @@ export default function App() {
                   {menuCount > 1 && <span className="menu-count-pill"> · {menuCount} menus</span>}
                 </div>
                 {menuCount < 4 && (
-                  <button
-                    className={`add-menu-btn${adding ? ' loading' : ''}`}
-                    onClick={() => addMenuRef.current?.click()}
-                    disabled={adding}
-                  >
-                    {adding ? <span className="add-spinner" /> : <IcoPlus />}
-                    {adding ? 'Reading…' : 'Add Menu'}
-                  </button>
+                  adding ? (
+                    <button className="add-menu-btn" disabled>
+                      <span className="add-spinner" /> Reading…
+                    </button>
+                  ) : addMenuMode === 'options' ? (
+                    <div className="add-menu-options">
+                      <button className="add-menu-option-btn" onClick={() => { setAddMenuMode(null); addMenuRef.current?.click(); }}>Upload File</button>
+                      <button className="add-menu-option-btn" onClick={() => setAddMenuMode('url')}>Paste URL</button>
+                      <button className="add-menu-option-cancel" onClick={() => setAddMenuMode(null)}>✕</button>
+                    </div>
+                  ) : addMenuMode !== 'url' && (
+                    <button className="add-menu-btn" onClick={() => setAddMenuMode('options')}>
+                      <IcoPlus /> Add Menu
+                    </button>
+                  )
                 )}
               </div>
+              {addMenuMode === 'url' && (
+                <div className="add-menu-url-row">
+                  <input
+                    className="add-menu-url-input"
+                    type="text"
+                    placeholder="Paste menu URL…"
+                    value={addMenuUrl}
+                    onChange={e => setAddMenuUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddMenuUrl()}
+                    autoFocus
+                  />
+                  <button className="add-menu-url-go" onClick={handleAddMenuUrl} disabled={!addMenuUrl.trim()}>Go</button>
+                  <button className="add-menu-url-cancel" onClick={() => { setAddMenuMode(null); setAddMenuUrl(''); }}>✕</button>
+                </div>
+              )}
               {addError && <div className="add-error">{addError}</div>}
               <input
                 ref={addMenuRef}
