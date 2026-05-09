@@ -40,14 +40,6 @@ const IcoPlus = () => (
   </svg>
 );
 
-const LogoMark = () => (
-  <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-    <rect x="3"  y="25" width="7" height="10" rx="2.5" fill="white" opacity="0.85"/>
-    <rect x="12" y="17" width="7" height="18" rx="2.5" fill="white"/>
-    <rect x="21" y="9"  width="7" height="26" rx="2.5" fill="white"/>
-    <rect x="30" y="20" width="6" height="15" rx="2.5" fill="white" opacity="0.7"/>
-  </svg>
-);
 
 /* ── Helpers ── */
 const fmt = (n) => `£${(n || 0).toFixed(2)}`;
@@ -252,8 +244,7 @@ export default function App() {
         {/* ── HOME ── */}
         {screen === 'home' && (
           <div className="home">
-            <div className="logo-mark"><LogoMark /></div>
-            <div className="logo-name">Tab<em>AI</em></div>
+            <img src="/logo.png" className="logo-img" alt="Tab AI" />
             <div className="tagline">Scan a menu. Build your order.</div>
             <button
               className="btn-scan"

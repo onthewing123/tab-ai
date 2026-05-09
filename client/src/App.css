@@ -53,29 +53,12 @@ html, body {
   padding: 48px 32px 56px;
 }
 
-.logo-mark {
-  width: 76px;
-  height: 76px;
-  background: linear-gradient(140deg, #6d28d9 0%, #8b5cf6 100%);
-  border-radius: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 22px;
-  box-shadow: 0 0 48px rgba(109, 40, 217, 0.45), 0 0 0 1px rgba(139,92,246,0.2);
-}
-
-.logo-name {
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin-bottom: 9px;
-  color: #fff;
-}
-
-.logo-name em {
-  color: #8b5cf6;
-  font-style: normal;
+.logo-img {
+  width: 148px;
+  height: 148px;
+  border-radius: 34px;
+  margin-bottom: 24px;
+  object-fit: cover;
 }
 
 .tagline {
