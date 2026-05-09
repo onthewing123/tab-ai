@@ -1,5 +1,5 @@
 [build]
-buildCommand = "apt-get install -y chromium && npm install && npm run build"
+buildCommand = "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' >> /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable && npm install && npm run build"
 
 [deploy]
 startCommand = "node server.js"
