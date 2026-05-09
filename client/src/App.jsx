@@ -94,6 +94,8 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const addMenuRef = useRef(null);
+  const homeUploadRef = useRef(null);
+  const [showHomeUrl, setShowHomeUrl] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addName, setAddName] = useState('');
   const [addPrice, setAddPrice] = useState('');
@@ -110,7 +112,7 @@ export default function App() {
       setScreen(to);
       after?.();
       setFading(false);
-    }, 220);
+    }, 300);
   };
 
   const handleFile = (e) => {
@@ -150,6 +152,44 @@ export default function App() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleHomeUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setPhase('loading');
+    setErrMsg('');
+    go('upload', async () => {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64 = ev.target.result.split(',')[1];
+        const mediaType = file.type || 'image/jpeg';
+        try {
+          const result = await scanMenu(base64, mediaType);
+          setSel({});
+          setMenuCount(1);
+          setShowAddForm(false);
+          setMenuNames([result.menuName || 'Menu']);
+          if (result.type === 'set') {
+            setMenu([]);
+            setSetMenus([result]);
+            setSetMenuSels([{ optionIdx: null, courses: {} }]);
+          } else {
+            if (!result.items?.length) throw new Error('No items found');
+            setMenu(result.items);
+            setSetMenus([]);
+            setSetMenuSels([]);
+          }
+          go('menu');
+          setPhase('idle');
+        } catch {
+          setErrMsg("Couldn't read menu — try a clearer screenshot");
+          setPhase('error');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleAddMenu = (e) => {
@@ -329,31 +369,54 @@ export default function App() {
             <div className="logo-wrap">
               <img src="/logo.png" className="logo-img" alt="Tab AI" />
             </div>
-            <div className="tagline">Scan a menu. Build your order.</div>
+            <div className="tagline">Know the bill. Enjoy the moment.</div>
             <button
               className="btn-scan"
-              onClick={() => go('upload', () => { setPhase('idle'); setErrMsg(''); setUrlInput(''); })}
+              onClick={() => go('upload', () => { setPhase('idle'); setErrMsg(''); setUrlInput(''); setShowHomeUrl(false); })}
             >
               Scan Menu
             </button>
-            <div className="home-divider"><span>or</span></div>
-            <div className="url-row">
-              <input
-                className="url-input"
-                type="text"
-                placeholder="Paste a menu URL…"
-                value={urlInput}
-                onChange={e => setUrlInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleUrlSubmit()}
-              />
+            <div className="home-secondary">
               <button
-                className="url-go-btn"
-                onClick={handleUrlSubmit}
-                disabled={!urlInput.trim()}
+                className="btn-secondary-action"
+                onClick={() => homeUploadRef.current?.click()}
               >
-                Go
+                Upload Menu
+              </button>
+              <button
+                className={`btn-secondary-action${showHomeUrl ? ' active' : ''}`}
+                onClick={() => { setShowHomeUrl(v => !v); setUrlInput(''); }}
+              >
+                Paste URL
               </button>
             </div>
+            {showHomeUrl && (
+              <div className="url-row">
+                <input
+                  className="url-input"
+                  type="text"
+                  placeholder="Paste a menu URL…"
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleUrlSubmit()}
+                  autoFocus
+                />
+                <button
+                  className="url-go-btn"
+                  onClick={handleUrlSubmit}
+                  disabled={!urlInput.trim()}
+                >
+                  Go
+                </button>
+              </div>
+            )}
+            <input
+              ref={homeUploadRef}
+              type="file"
+              accept="image/*,.pdf"
+              style={{ display: 'none' }}
+              onChange={handleHomeUpload}
+            />
           </div>
         )}
 
