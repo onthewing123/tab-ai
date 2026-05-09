@@ -2,13 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const FirecrawlApp = require('@mendable/firecrawl-js').default;
+const { FirecrawlClient } = require('@mendable/firecrawl-js');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+const firecrawl = new FirecrawlClient({ apiKey: process.env.FIRECRAWL_API_KEY });
 
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
@@ -110,10 +110,10 @@ app.post('/api/scrape-menu', async (req, res) => {
   }
 
   try {
-    const scrapeResult = await firecrawl.scrapeUrl(parsedUrl.href, { formats: ['markdown'] });
+    const scrapeResult = await firecrawl.scrape(parsedUrl.href, { formats: ['markdown'] });
     console.log('[scrape-menu] firecrawl response:', JSON.stringify(scrapeResult, null, 2));
 
-    if (!scrapeResult.success || !scrapeResult.markdown) {
+    if (!scrapeResult.markdown) {
       return res.status(422).json({ error: 'Could not extract content from that page' });
     }
 
