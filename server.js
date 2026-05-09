@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const Anthropic = require('@anthropic-ai/sdk');
 const puppeteer = require('puppeteer');
 
@@ -8,6 +9,18 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const CHROMIUM_PATHS = [
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+];
+
+const getChromiumPath = () => {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+  return CHROMIUM_PATHS.find(p => fs.existsSync(p)) || undefined;
+};
 
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
@@ -17,6 +30,16 @@ const stripMarkdown = (text) => {
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   return text.trim();
 };
+
+app.get('/api/health', (_req, res) => {
+  const chromiumPath = getChromiumPath();
+  res.json({
+    status: 'ok',
+    chromiumPath: chromiumPath || null,
+    chromiumFound: chromiumPath ? fs.existsSync(chromiumPath) : false,
+    checkedPaths: CHROMIUM_PATHS.map(p => ({ path: p, exists: fs.existsSync(p) })),
+  });
+});
 
 app.post('/api/read-menu', async (req, res) => {
   const { base64, mediaType } = req.body;
@@ -100,7 +123,7 @@ app.post('/api/scrape-menu', async (req, res) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: getChromiumPath(),
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
     });
 
