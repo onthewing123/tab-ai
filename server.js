@@ -19,13 +19,13 @@ const stripMarkdown = (text) => {
   return text.trim();
 };
 
-const MENU_PROMPT_SUFFIX = `Determine whether it is a set menu / prix fixe menu (fixed price tiers with course choices) or an à la carte menu (items each with their own price).
+const MENU_PROMPT_SUFFIX = `Determine the menu name/type (e.g. "A La Carte", "Set Lunch Menu", "Drinks Menu", "Dessert Menu", "Prix Fixe", "Tasting Menu" — infer from the content). Then determine whether it is a set menu / prix fixe menu (fixed price tiers with course choices) or an à la carte menu (items each with their own price).
 
 If à la carte, return exactly:
-{"type":"alacarte","items":[{"section":string,"name":string,"description":string,"price":number}]}
+{"type":"alacarte","menuName":string,"items":[{"section":string,"name":string,"description":string,"price":number}]}
 
 If set or prix fixe, return exactly:
-{"type":"set","options":[{"label":string,"price":number}],"courses":[{"name":string,"items":[{"name":string,"description":string,"supplement":number}]}]}
+{"type":"set","menuName":string,"options":[{"label":string,"price":number}],"courses":[{"name":string,"items":[{"name":string,"description":string,"supplement":number}]}]}
 
 For set menus: "options" are the price tiers (e.g. Lunch £32.95 / Dinner £38.95, or 2 courses £28 / 3 courses £35). "courses" are the meal stages (Starter, Main, Dessert etc). "supplement" is the extra charge above the base price, or 0 if none. All prices as numbers in GBP.
 
@@ -33,17 +33,18 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.`;
 
 const parseAndRespond = (raw, res) => {
   const parsed = JSON.parse(raw);
+  const menuName = parsed.menuName || '';
   if (parsed.type === 'set') {
     if (!Array.isArray(parsed.options) || !Array.isArray(parsed.courses)) {
       return res.status(422).json({ error: 'Invalid set menu structure' });
     }
-    res.json({ type: 'set', options: parsed.options, courses: parsed.courses });
+    res.json({ type: 'set', menuName, options: parsed.options, courses: parsed.courses });
   } else {
     const items = Array.isArray(parsed) ? parsed : parsed.items;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(422).json({ error: 'No menu items found' });
     }
-    res.json({ type: 'alacarte', items });
+    res.json({ type: 'alacarte', menuName, items });
   }
 };
 

@@ -493,6 +493,18 @@ html, body {
   color: rgba(167, 139, 250, 0.8);
 }
 
+.menu-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  padding: 6px 4px 0;
+  color: #fff;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .menu-hdr-bottom {
   display: flex;
   align-items: center;

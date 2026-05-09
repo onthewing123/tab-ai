@@ -100,6 +100,7 @@ export default function App() {
   const [urlInput, setUrlInput] = useState('');
   const [addMenuMode, setAddMenuMode] = useState(null); // null | 'options' | 'url'
   const [addMenuUrl, setAddMenuUrl] = useState('');
+  const [menuNames, setMenuNames] = useState([]);
 
   const go = (to, after) => {
     setFading(true);
@@ -128,6 +129,7 @@ export default function App() {
         setSel({});
         setMenuCount(1);
         setShowAddForm(false);
+        setMenuNames([result.menuName || 'Menu']);
         if (result.type === 'set') {
           setMenu([]);
           setSetMenus([result]);
@@ -171,6 +173,7 @@ export default function App() {
           setMenu(prev => [...prev, ...result.items]);
         }
         setMenuCount(c => c + 1);
+        setMenuNames(prev => [...prev, result.menuName || 'Menu']);
       } catch {
         setAddError("Couldn't read menu — try a clearer screenshot");
       } finally {
@@ -197,6 +200,7 @@ export default function App() {
         setMenu(prev => [...prev, ...result.items]);
       }
       setMenuCount(c => c + 1);
+      setMenuNames(prev => [...prev, result.menuName || 'Menu']);
     } catch {
       setAddError("Couldn't read menu from that URL");
     } finally {
@@ -225,6 +229,7 @@ export default function App() {
         setSel({});
         setMenuCount(1);
         setShowAddForm(false);
+        setMenuNames([result.menuName || 'Menu']);
         if (result.type === 'set') {
           setMenu([]);
           setSetMenus([result]);
@@ -384,6 +389,9 @@ export default function App() {
                   {showAddForm ? 'Cancel' : '+ Add Item'}
                 </button>
               </div>
+              {menuNames.length > 0 && (
+                <div className="menu-name">{menuNames.join(' · ')}</div>
+              )}
               <div className="menu-hdr-bottom">
                 <div className="menu-meta">
                   {totalItemCount} item{totalItemCount !== 1 ? 's' : ''}
