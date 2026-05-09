@@ -113,9 +113,6 @@ app.post('/api/scrape-menu', async (req, res) => {
     const scrapeResult = await firecrawl.scrape(parsedUrl.href, {
       formats: ['markdown'],
       waitFor: 3000,
-      actions: [
-        { type: 'wait', milliseconds: 3000 },
-      ],
     });
     console.log('[scrape-menu] firecrawl response:', JSON.stringify(scrapeResult, null, 2));
 
