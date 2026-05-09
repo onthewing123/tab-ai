@@ -476,7 +476,17 @@ html, body {
 }
 .set-item.on .supplement-badge { color: #a78bfa; }
 
-/* Tab supplement rows */
+/* Tab set-menu item rows */
+.tab-row-included .tab-row-name {
+  color: rgba(255,255,255,0.5);
+  font-size: 13.5px;
+  padding-left: 12px;
+}
+.tab-row-included .tab-row-price {
+  color: rgba(255,255,255,0.22);
+  font-size: 12px;
+}
+
 .tab-row-supplement .tab-row-name {
   color: rgba(255,255,255,0.5);
   font-size: 13.5px;

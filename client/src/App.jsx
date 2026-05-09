@@ -274,10 +274,14 @@ export default function App() {
     const s = setMenuSels[mi];
     if (s.optionIdx === null) return [];
     const opt = sm.options[s.optionIdx];
-    const lines = [{ label: opt.label, price: opt.price }];
+    const lines = [{ label: opt.label, price: opt.price, kind: 'base' }];
     Object.entries(s.courses).forEach(([ci, ii]) => {
       const item = sm.courses[Number(ci)]?.items[ii];
-      if (item?.supplement > 0) lines.push({ label: `${item.name} supplement`, price: item.supplement });
+      if (item) lines.push({
+        label: item.name,
+        price: item.supplement || 0,
+        kind: item.supplement > 0 ? 'supplement' : 'included',
+      });
     });
     return lines;
   });
@@ -292,7 +296,9 @@ export default function App() {
   );
 
   const share = () => {
-    const setLines = setMenuLineItems.map(l => `${l.label}  ${fmt(l.price)}`);
+    const setLines = setMenuLineItems.map(l =>
+      l.kind === 'included' ? l.label : `${l.label}  ${fmt(l.price)}`
+    );
     const alaLines = selKeys.map(i => `${menu[i].name}  ${fmt(menu[i].price)}`);
     const lines = [...setLines, ...alaLines];
     const text = [
@@ -561,9 +567,11 @@ export default function App() {
 
             <div className="tab-body">
               {setMenuLineItems.map((line, i) => (
-                <div key={`sml-${i}`} className={`tab-row${i > 0 && line.label.endsWith('supplement') ? ' tab-row-supplement' : ''}`}>
+                <div key={`sml-${i}`} className={`tab-row tab-row-${line.kind}`}>
                   <div className="tab-row-name">{line.label}</div>
-                  <div className="tab-row-price">{fmt(line.price)}</div>
+                  <div className="tab-row-price">
+                    {line.kind === 'included' ? 'incl.' : fmt(line.price)}
+                  </div>
                 </div>
               ))}
               {selKeys.map(i => {
