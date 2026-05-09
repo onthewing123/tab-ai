@@ -1,5 +1,5 @@
 [build]
-buildCommand = "apt-get install -y chromium chromium-driver && npm install && npm run build"
+buildCommand = "apt-get install -y chromium && npm install && npm run build"
 
 [deploy]
 startCommand = "node server.js"
