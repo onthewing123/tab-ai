@@ -67,6 +67,17 @@ const scanMenu = async (base64, mediaType) => {
   return data;
 };
 
+const scrapeMenu = async (url) => {
+  const res = await fetch('/api/scrape-menu', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+  return data;
+};
+
 /* ── App ── */
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -86,6 +97,7 @@ export default function App() {
   const [addPrice, setAddPrice] = useState('');
   const [setMenus, setSetMenus] = useState([]);
   const [setMenuSels, setSetMenuSels] = useState([]);
+  const [urlInput, setUrlInput] = useState('');
 
   const go = (to, after) => {
     setFading(true);
@@ -175,6 +187,36 @@ export default function App() {
     setAddPrice('');
   };
 
+  const handleUrlSubmit = () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    setPhase('loading');
+    setErrMsg('');
+    go('upload', async () => {
+      try {
+        const result = await scrapeMenu(url);
+        setSel({});
+        setMenuCount(1);
+        setShowAddForm(false);
+        if (result.type === 'set') {
+          setMenu([]);
+          setSetMenus([result]);
+          setSetMenuSels([{ optionIdx: null, courses: {} }]);
+        } else {
+          if (!result.items?.length) throw new Error('No items found');
+          setMenu(result.items);
+          setSetMenus([]);
+          setSetMenuSels([]);
+        }
+        go('menu');
+        setPhase('idle');
+      } catch (err) {
+        setErrMsg(err.message || "Couldn't read menu from that URL");
+        setPhase('error');
+      }
+    });
+  };
+
   const toggle = (idx) => {
     setSel(prev => {
       const next = { ...prev };
@@ -248,10 +290,28 @@ export default function App() {
             <div className="tagline">Scan a menu. Build your order.</div>
             <button
               className="btn-scan"
-              onClick={() => go('upload', () => { setPhase('idle'); setErrMsg(''); })}
+              onClick={() => go('upload', () => { setPhase('idle'); setErrMsg(''); setUrlInput(''); })}
             >
               Scan Menu
             </button>
+            <div className="home-divider"><span>or</span></div>
+            <div className="url-row">
+              <input
+                className="url-input"
+                type="url"
+                placeholder="Paste a menu URL…"
+                value={urlInput}
+                onChange={e => setUrlInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleUrlSubmit()}
+              />
+              <button
+                className="url-go-btn"
+                onClick={handleUrlSubmit}
+                disabled={!urlInput.trim()}
+              >
+                Go
+              </button>
+            </div>
           </div>
         )}
 

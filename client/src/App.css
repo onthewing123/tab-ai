@@ -65,7 +65,72 @@ html, body {
   font-size: 15px;
   color: rgba(255,255,255,0.38);
   letter-spacing: 0.01em;
-  margin-bottom: 60px;
+  margin-bottom: 28px;
+}
+
+.home-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+  margin: 20px 0;
+  gap: 12px;
+  color: rgba(255,255,255,0.2);
+  font-size: 12px;
+}
+.home-divider::before,
+.home-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+}
+
+.url-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.url-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.url-input:focus {
+  border-color: rgba(124, 58, 237, 0.5);
+  background: rgba(255,255,255,0.07);
+}
+.url-input::placeholder { color: rgba(255,255,255,0.22); }
+
+.url-go-btn {
+  padding: 14px 20px;
+  background: rgba(124, 58, 237, 0.18);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 14px;
+  color: #a78bfa;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.url-go-btn:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.28);
+  border-color: rgba(124, 58, 237, 0.55);
+}
+.url-go-btn:active:not(:disabled) { transform: scale(0.96); }
+.url-go-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .btn-scan {
