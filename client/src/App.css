@@ -1107,6 +1107,132 @@ html, body {
   letter-spacing: -0.5px;
 }
 
+/* Split Bill */
+.btn-split-toggle {
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  color: rgba(255,255,255,0.5);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.btn-split-toggle:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.75);
+}
+.btn-split-toggle.open {
+  border-color: rgba(124, 58, 237, 0.45);
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.07);
+}
+
+.split-section {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.35s ease;
+}
+.split-section.open {
+  max-height: 480px;
+}
+
+.split-inner {
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.split-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.split-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.45);
+}
+
+.split-pills {
+  display: flex;
+  gap: 7px;
+}
+
+.split-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 2px;
+}
+
+.split-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.split-item-name {
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  flex: 1;
+}
+
+.split-item-each {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+}
+
+.split-per-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.split-per-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.45);
+}
+
+.split-per-amount {
+  font-size: 34px;
+  font-weight: 800;
+  color: #8b5cf6;
+  letter-spacing: -0.5px;
+}
+
+.btn-share-split {
+  width: 100%;
+  padding: 13px;
+  background: rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(124, 58, 237, 0.38);
+  border-radius: 13px;
+  color: #a78bfa;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-share-split:hover { background: rgba(124, 58, 237, 0.24); }
+.btn-share-split:active { transform: scale(0.98); }
+
 /* Actions */
 .tab-actions {
   padding: 12px 16px 36px;

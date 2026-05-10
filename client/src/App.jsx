@@ -106,6 +106,9 @@ export default function App() {
   const [addMenuUrl, setAddMenuUrl] = useState('');
   const [menuNames, setMenuNames] = useState([]);
   const [loadingProgress, setLoadingProgress] = useState(null); // null | { current, total }
+  const [showSplit, setShowSplit] = useState(false);
+  const [splitPeople, setSplitPeople] = useState(2);
+  const [splitMode, setSplitMode] = useState('equal');
 
   const go = (to, after) => {
     setFading(true);
@@ -370,6 +373,34 @@ export default function App() {
       setToast(true);
       setTimeout(() => setToast(false), 2200);
     });
+  };
+
+  const shareSplit = () => {
+    const perPerson = total / splitPeople;
+    const lines = [`Split Bill — ${splitPeople} people`, ''];
+    if (splitMode === 'item') {
+      setMenuLineItems.filter(l => l.kind !== 'included').forEach(l => {
+        lines.push(`${l.label}: ${fmt(l.price / splitPeople)} each`);
+      });
+      selKeys.forEach(i => {
+        const item = menu[i];
+        if (!item) return;
+        const qty = sel[i] || 1;
+        lines.push(`${qty > 1 ? `${item.name} ×${qty}` : item.name}: ${fmt(item.price * qty / splitPeople)} each`);
+      });
+      lines.push('');
+    }
+    lines.push(`Each person pays: ${fmt(perPerson)}`);
+    if (tipAmt > 0) lines.push(`(includes ${tipPct}% tip)`);
+    const text = lines.join('\n');
+    if (navigator.share) {
+      navigator.share({ title: 'Split Bill', text }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        setToast(true);
+        setTimeout(() => setToast(false), 2200);
+      });
+    }
   };
 
   const sections = groupBySection(menu);
@@ -739,6 +770,69 @@ export default function App() {
                 <div className="total-row">
                   <span className="total-label">Estimated Total</span>
                   <span className="total-val">{fmt(total)}</span>
+                </div>
+
+                <button
+                  className={`btn-split-toggle${showSplit ? ' open' : ''}`}
+                  onClick={() => setShowSplit(v => !v)}
+                >
+                  Split Bill
+                </button>
+
+                <div className={`split-section${showSplit ? ' open' : ''}`}>
+                  <div className="split-inner">
+                    <div className="split-row">
+                      <span className="split-label">Number of people</span>
+                      <div className="qty-controls">
+                        <button className="qty-btn" onClick={() => setSplitPeople(p => Math.max(2, p - 1))}>−</button>
+                        <span className="qty-num">{splitPeople}</span>
+                        <button className="qty-btn" onClick={() => setSplitPeople(p => Math.min(20, p + 1))}>+</button>
+                      </div>
+                    </div>
+
+                    <div className="split-pills">
+                      {['equal', 'item'].map(mode => (
+                        <button
+                          key={mode}
+                          className={`tip-pill${splitMode === mode ? ' on' : ''}`}
+                          onClick={() => setSplitMode(mode)}
+                        >
+                          {mode === 'equal' ? 'Equal Split' : 'By Item'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {splitMode === 'item' && (
+                      <div className="split-items">
+                        {setMenuLineItems.filter(l => l.kind !== 'included').map((l, i) => (
+                          <div key={`si-${i}`} className="split-item-row">
+                            <span className="split-item-name">{l.label}</span>
+                            <span className="split-item-each">{fmt(l.price / splitPeople)}</span>
+                          </div>
+                        ))}
+                        {selKeys.map(i => {
+                          const item = menu[i];
+                          if (!item) return null;
+                          const qty = sel[i] || 1;
+                          return (
+                            <div key={i} className="split-item-row">
+                              <span className="split-item-name">{item.name}{qty > 1 ? ` ×${qty}` : ''}</span>
+                              <span className="split-item-each">{fmt(item.price * qty / splitPeople)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="split-per-row">
+                      <span className="split-per-label">Per person</span>
+                      <span className="split-per-amount">{fmt(total / splitPeople)}</span>
+                    </div>
+
+                    <button className="btn-share-split" onClick={shareSplit}>
+                      <IcoShare /> Share Split
+                    </button>
+                  </div>
                 </div>
               </div>
 
