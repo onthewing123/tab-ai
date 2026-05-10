@@ -1361,6 +1361,7 @@ html, body {
 }
 .btn-share:hover { background: #6d28d9; }
 .btn-share:active { transform: scale(0.97); }
+.btn-share:disabled { opacity: 0.65; cursor: default; transform: none; }
 
 .btn-back-menu {
   padding: 16px 16px;

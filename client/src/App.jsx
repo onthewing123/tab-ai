@@ -118,6 +118,8 @@ export default function App() {
   const [showSplit, setShowSplit] = useState(false);
   const [splitPeople, setSplitPeople] = useState(2);
   const [splitMode, setSplitMode] = useState('equal');
+  const [sharing, setSharing] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
   useEffect(() => {
     if (phase !== 'loading') { setLoadingMsgIdx(0); return; }
@@ -364,29 +366,185 @@ export default function App() {
     s + sm.courses.reduce((cs, c) => cs + c.items.length, 0), 0
   );
 
-  const share = () => {
-    const setLines = setMenuLineItems.map(l =>
-      l.kind === 'included' ? l.label : `${l.label}  ${fmt(l.price)}`
-    );
-    const alaLines = selKeys.map(i => {
-      const qty = sel[i] || 1;
-      return qty > 1
-        ? `${menu[i].name} ×${qty}  ${fmt(menu[i].price * qty)}`
-        : `${menu[i].name}  ${fmt(menu[i].price)}`;
-    });
-    const lines = [...setLines, ...alaLines];
-    const text = [
-      'My Tab', '',
-      ...lines, '',
-      `Subtotal: ${fmt(subtotal)}`,
-      ...(tipAmt > 0 ? [`Tip (${tipPct}%): ${fmt(tipAmt)}`] : []),
-      `Total: ${fmt(total)}`,
-    ].join('\n');
+  const share = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const W = 1080, H = 1920, PAD = 80, CW = W - PAD * 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
 
-    navigator.clipboard.writeText(text).then(() => {
-      setToast(true);
-      setTimeout(() => setToast(false), 2200);
-    });
+      // Utilities
+      const rRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
+      const trunc = (str, maxW) => {
+        if (ctx.measureText(str).width <= maxW) return str;
+        let s = str;
+        while (ctx.measureText(s + '…').width > maxW && s.length > 0) s = s.slice(0, -1);
+        return s + '…';
+      };
+      const divider = (yPos, alpha = 0.12) => {
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(PAD, yPos); ctx.lineTo(W - PAD, yPos); ctx.stroke();
+      };
+      const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+      const tf = (str, xPos, yPos, { size = 34, weight = '400', color = '#fff', align = 'center' } = {}) => {
+        ctx.font = `${weight} ${size}px ${FONT}`;
+        ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+        ctx.fillText(str, xPos, yPos);
+      };
+
+      // Background
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#1a0533'); bg.addColorStop(0.55, '#0d0520'); bg.addColorStop(1, '#0a0a1f');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+      // Glow blobs
+      [[W * 0.15, H * 0.08, 520, 'rgba(124,58,237,0.22)'],
+       [W * 0.85, H * 0.8,  420, 'rgba(88,28,220,0.16)'],
+       [W * 0.5,  H * 0.45, 600, 'rgba(109,40,217,0.07)'],
+      ].forEach(([gx, gy, gr, gc]) => {
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+        g.addColorStop(0, gc); g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      });
+
+      let y = 120;
+
+      // Logo
+      try {
+        const logoImg = await new Promise((res, rej) => {
+          const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = '/logo.png';
+        });
+        const SZ = 184, lx = (W - SZ) / 2;
+        const lg = ctx.createRadialGradient(W / 2, y + SZ / 2, 0, W / 2, y + SZ / 2, 190);
+        lg.addColorStop(0, 'rgba(139,92,246,0.6)'); lg.addColorStop(1, 'transparent');
+        ctx.fillStyle = lg; ctx.fillRect(W / 2 - 220, y - 50, 440, SZ + 100);
+        ctx.save(); rRect(lx, y, SZ, SZ, 42); ctx.clip();
+        ctx.drawImage(logoImg, lx, y, SZ, SZ);
+        ctx.restore();
+        y += SZ + 44;
+      } catch { y += 40; }
+
+      // App name
+      tf('Tab AI', W / 2, y, { size: 56, weight: '700' });
+      y += 66;
+
+      // Menu name
+      if (menuNames.length) {
+        ctx.font = `400 32px ${FONT}`;
+        tf(trunc(menuNames.join(' · '), CW), W / 2, y, { size: 32, color: 'rgba(255,255,255,0.45)' });
+        y += 54;
+      }
+
+      y += 18; divider(y); y += 52;
+
+      // Items
+      const MAX_ITEMS = 8;
+      const allItems = [
+        ...setMenuLineItems.map(l => ({
+          name: l.kind === 'included' ? `  ${l.label}` : l.label,
+          price: l.kind === 'included' ? null : l.price,
+          sub: l.kind !== 'base',
+        })),
+        ...selKeys.map(i => {
+          const item = menu[i]; if (!item) return null;
+          const qty = sel[i] || 1;
+          return { name: qty > 1 ? `${item.name} ×${qty}` : item.name, price: item.price * qty, sub: false };
+        }).filter(Boolean),
+      ];
+      const shown = allItems.slice(0, MAX_ITEMS);
+      const overflow = allItems.length - shown.length;
+
+      for (const item of shown) {
+        const sz = item.sub ? 30 : 34;
+        const col = item.sub ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.88)';
+        ctx.font = `400 ${sz}px ${FONT}`; ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = col; ctx.textAlign = 'left';
+        ctx.fillText(trunc(item.name, CW - 200), PAD, y);
+        ctx.textAlign = 'right';
+        if (item.price !== null) {
+          ctx.font = `500 ${sz}px ${FONT}`; ctx.fillStyle = col;
+          ctx.fillText(fmt(item.price), W - PAD, y);
+        } else {
+          ctx.font = `400 26px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,0.28)';
+          ctx.fillText('incl.', W - PAD, y);
+        }
+        y += 66;
+      }
+      if (overflow > 0) {
+        tf(`+ ${overflow} more item${overflow !== 1 ? 's' : ''}`, W / 2, y,
+          { size: 28, color: 'rgba(255,255,255,0.3)' });
+        y += 52;
+      }
+
+      y += 14; divider(y); y += 50;
+
+      // Summary rows
+      const sumRow = (label, val, lc = 'rgba(255,255,255,0.5)', vc = 'rgba(255,255,255,0.72)') => {
+        tf(label, PAD, y, { size: 34, color: lc, align: 'left' });
+        tf(val, W - PAD, y, { size: 34, color: vc, align: 'right' });
+        y += 60;
+      };
+      sumRow('Subtotal', fmt(subtotal));
+      if (tipAmt > 0) sumRow(`Tip (${tipPct}%)`, fmt(tipAmt));
+
+      divider(y - 6, 0.09); y += 42;
+
+      // Total
+      tf('Estimated Total', PAD, y, { size: 30, weight: '500', color: 'rgba(255,255,255,0.45)', align: 'left' });
+      y += 20;
+      tf(fmt(total), W - PAD, y + 84, { size: 100, weight: '800', color: '#a78bfa', align: 'right' });
+      y += 114;
+
+      // Split pill
+      if (showSplit) {
+        y += 20;
+        const pillText = `Split ${splitPeople} ways — ${fmt(total / splitPeople)} each`;
+        const pH = 76, pR = pH / 2;
+        rRect(PAD, y, CW, pH, pR);
+        ctx.fillStyle = 'rgba(124,58,237,0.22)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(167,139,250,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.font = `600 30px ${FONT}`; ctx.fillStyle = '#c4b5fd';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(trunc(pillText, CW - 60), W / 2, y + pH / 2);
+        y += pH + 24;
+      }
+
+      // Footer
+      divider(H - 132, 0.07);
+      tf('Know the bill. Enjoy the moment.', W / 2, H - 76,
+        { size: 30, weight: '600', color: 'rgba(255,255,255,0.18)' });
+
+      // Share or download
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const file = new File([blob], 'tab-ai.png', { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'My Tab — Tab AI' });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'tab-ai.png';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        setToastMsg('Image saved'); setToast(true); setTimeout(() => setToast(false), 2200);
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        setToastMsg('Could not share — try again'); setToast(true); setTimeout(() => setToast(false), 2500);
+      }
+    } finally {
+      setSharing(false);
+    }
   };
 
   const shareSplit = () => {
@@ -411,8 +569,7 @@ export default function App() {
       navigator.share({ title: 'Split Bill', text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        setToast(true);
-        setTimeout(() => setToast(false), 2200);
+        setToastMsg('Copied to clipboard'); setToast(true); setTimeout(() => setToast(false), 2200);
       });
     }
   };
@@ -867,8 +1024,8 @@ export default function App() {
               </div>
 
               <div className="tab-actions">
-                <button className="btn-share" onClick={share}>
-                  <IcoShare /> Share Tab
+                <button className="btn-share" onClick={share} disabled={sharing}>
+                  {sharing ? 'Generating…' : <><IcoShare /> Share Tab</>}
                 </button>
                 <button className="btn-back-menu" onClick={() => go('menu')}>
                   Back to Menu
@@ -879,7 +1036,7 @@ export default function App() {
         )}
       </div>
 
-      <div className={`toast${toast ? ' show' : ''}`}>Copied to clipboard</div>
+      <div className={`toast${toast ? ' show' : ''}`}>{toastMsg}</div>
     </div>
   );
 }
