@@ -842,6 +842,40 @@ html, body {
   border-color: #7c3aed;
 }
 
+.item-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.item-qty-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.5);
+  color: #a78bfa;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+.item-qty-btn:hover { background: rgba(124, 58, 237, 0.35); }
+.item-qty-btn:active { transform: scale(0.86); }
+
+.item-qty-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: #a78bfa;
+  min-width: 14px;
+  text-align: center;
+}
+
 /* ── ORDER BAR ── */
 .order-bar {
   flex-shrink: 0;

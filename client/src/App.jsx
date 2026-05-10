@@ -297,9 +297,8 @@ export default function App() {
 
   const toggle = (idx) => {
     setSel(prev => {
-      const next = { ...prev };
-      if (next[idx]) delete next[idx]; else next[idx] = 1;
-      return next;
+      if (prev[idx]) return prev; // already selected — use − to remove
+      return { ...prev, [idx]: 1 };
     });
   };
 
@@ -645,9 +644,21 @@ export default function App() {
                       </div>
                       <div className="item-right">
                         <div className="item-price">{fmt(item.price)}</div>
-                        <div className="item-check">
-                          {sel[item._i] && <IcoCheck />}
-                        </div>
+                        {sel[item._i] ? (
+                          <div className="item-qty-controls">
+                            <button
+                              className="item-qty-btn"
+                              onClick={e => { e.stopPropagation(); adjustQty(item._i, -1); }}
+                            >−</button>
+                            <span className="item-qty-num">{sel[item._i]}</span>
+                            <button
+                              className="item-qty-btn"
+                              onClick={e => { e.stopPropagation(); adjustQty(item._i, 1); }}
+                            >+</button>
+                          </div>
+                        ) : (
+                          <div className="item-check" />
+                        )}
                       </div>
                     </div>
                   ))}
