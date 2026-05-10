@@ -310,8 +310,17 @@ export default function App() {
     ));
   };
 
+  const adjustQty = (idx, delta) => {
+    setSel(prev => {
+      const next = { ...prev };
+      const newQty = (next[idx] || 0) + delta;
+      if (newQty <= 0) delete next[idx]; else next[idx] = newQty;
+      return next;
+    });
+  };
+
   const selKeys = Object.keys(sel);
-  const alacarteSubtotal = selKeys.reduce((s, i) => s + (menu[i]?.price || 0), 0);
+  const alacarteSubtotal = selKeys.reduce((s, i) => s + (menu[i]?.price || 0) * (sel[i] || 1), 0);
 
   const setMenuLineItems = setMenus.flatMap((sm, mi) => {
     const s = setMenuSels[mi];
@@ -333,7 +342,7 @@ export default function App() {
   const tipAmt = subtotal * (tipPct / 100);
   const total = subtotal + tipAmt;
   const hasAnySelection = selKeys.length > 0 || setMenuSels.some(s => s.optionIdx !== null);
-  const orderBarCount = selKeys.length + setMenuSels.filter(s => s.optionIdx !== null).length;
+  const orderBarCount = selKeys.reduce((s, i) => s + (sel[i] || 0), 0) + setMenuSels.filter(s => s.optionIdx !== null).length;
   const totalItemCount = menu.length + setMenus.reduce((s, sm) =>
     s + sm.courses.reduce((cs, c) => cs + c.items.length, 0), 0
   );
@@ -342,7 +351,12 @@ export default function App() {
     const setLines = setMenuLineItems.map(l =>
       l.kind === 'included' ? l.label : `${l.label}  ${fmt(l.price)}`
     );
-    const alaLines = selKeys.map(i => `${menu[i].name}  ${fmt(menu[i].price)}`);
+    const alaLines = selKeys.map(i => {
+      const qty = sel[i] || 1;
+      return qty > 1
+        ? `${menu[i].name} ×${qty}  ${fmt(menu[i].price * qty)}`
+        : `${menu[i].name}  ${fmt(menu[i].price)}`;
+    });
     const lines = [...setLines, ...alaLines];
     const text = [
       'My Tab', '',
@@ -651,13 +665,18 @@ export default function App() {
                 {selKeys.map(i => {
                   const item = menu[i];
                   if (!item) return null;
+                  const qty = sel[i] || 1;
                   return (
                     <div key={i} className="tab-row">
-                      <div>
-                        <div className="tab-row-name">{item.name}</div>
-                        <div className="tab-row-qty">×1</div>
+                      <div className="tab-row-name">{item.name}</div>
+                      <div className="tab-row-right">
+                        <div className="qty-controls">
+                          <button className="qty-btn" onClick={() => adjustQty(i, -1)}>−</button>
+                          <span className="qty-num">{qty}</span>
+                          <button className="qty-btn" onClick={() => adjustQty(i, 1)}>+</button>
+                        </div>
+                        <div className="tab-row-price">{fmt(item.price * qty)}</div>
                       </div>
-                      <div className="tab-row-price">{fmt(item.price)}</div>
                     </div>
                   );
                 })}

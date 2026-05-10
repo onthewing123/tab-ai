@@ -932,7 +932,7 @@ html, body {
 
 .tab-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   padding: 13px 0;
   border-bottom: 1px solid rgba(255,255,255,0.055);
@@ -946,10 +946,44 @@ html, body {
   flex: 1;
 }
 
-.tab-row-qty {
-  font-size: 12px;
-  color: rgba(255,255,255,0.3);
-  margin-top: 2px;
+.tab-row-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.qty-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.18);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #a78bfa;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+.qty-btn:hover { background: rgba(124, 58, 237, 0.32); }
+.qty-btn:active { transform: scale(0.88); }
+
+.qty-num {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 14px;
+  text-align: center;
 }
 
 .tab-row-price {
@@ -957,7 +991,8 @@ html, body {
   font-weight: 500;
   color: rgba(255,255,255,0.85);
   flex-shrink: 0;
-  padding-top: 1px;
+  min-width: 44px;
+  text-align: right;
 }
 
 /* Summary */
