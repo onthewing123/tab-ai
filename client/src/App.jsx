@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 /* ── Icons ── */
 const IcoCamera = () => (
@@ -40,6 +40,14 @@ const IcoPlus = () => (
   </svg>
 );
 
+
+/* ── Constants ── */
+const LOADING_MSGS = [
+  'Reading your menu…',
+  'Finding all the good stuff…',
+  'Calculating the damage…',
+  'Almost ready…',
+];
 
 /* ── Helpers ── */
 const fmt = (n) => `£${(n || 0).toFixed(2)}`;
@@ -106,9 +114,16 @@ export default function App() {
   const [addMenuUrl, setAddMenuUrl] = useState('');
   const [menuNames, setMenuNames] = useState([]);
   const [loadingProgress, setLoadingProgress] = useState(null); // null | { current, total }
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [showSplit, setShowSplit] = useState(false);
   const [splitPeople, setSplitPeople] = useState(2);
   const [splitMode, setSplitMode] = useState('equal');
+
+  useEffect(() => {
+    if (phase !== 'loading') { setLoadingMsgIdx(0); return; }
+    const id = setInterval(() => setLoadingMsgIdx(i => (i + 1) % LOADING_MSGS.length), 2000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const go = (to, after) => {
     setFading(true);
@@ -471,11 +486,15 @@ export default function App() {
           <div className="upload">
             {phase === 'loading' ? (
               <div className="loading">
-                <div className="spinner" />
-                <div className="loading-text">
+                <div className="loading-logo-wrap">
+                  <div className="loading-glow" />
+                  <img src="/logo.png" className="loading-logo" alt="" />
+                  <div className="scan-line" />
+                </div>
+                <div className="loading-msg" key={loadingMsgIdx}>
                   {loadingProgress
                     ? `Reading menu ${loadingProgress.current} of ${loadingProgress.total}…`
-                    : 'Reading your menu…'}
+                    : LOADING_MSGS[loadingMsgIdx]}
                 </div>
               </div>
             ) : (
