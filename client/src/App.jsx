@@ -586,7 +586,7 @@ export default function App() {
             <div className="logo-wrap">
               <img src="/logo.png" className="logo-img" alt="Tab AI" />
             </div>
-            <div className="tagline">Know the bill. Enjoy the moment.</div>
+            <div className="tagline">Know the bill.<br />Enjoy the moment.</div>
             <button
               className="btn-scan"
               onClick={() => go('upload', () => { setPhase('idle'); setErrMsg(''); setUrlInput(''); setShowHomeUrl(false); })}

@@ -135,6 +135,8 @@ html, body {
   gap: 8px;
   width: 100%;
   max-width: 320px;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .url-input {
